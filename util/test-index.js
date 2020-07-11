@@ -2,9 +2,14 @@ const game = {
     canvas: document.getElementById('gameBox'),
     keysActive: {},
     entities: [],
+    socket: null,
+    connectionID: '',
     start: () => {
+        game.socket = io('http://localhost:3000')
         game.context = game.canvas.getContext('2d')
-    
+        
+        game.watchServer()
+
         setInterval( updateGameArea, 20)
 
         $(document)
@@ -18,12 +23,33 @@ const game = {
     clear: () => {
         game.context.clearRect(0, 0, game.canvas.width, game.canvas.height)
     },
+    watchServer: () => {
+        game.socket.on('welcome', socketID => game.initiatePlayer(socketID) )
+
+        game.socket.on('addUser', data => {
+            console.log('Got a new user!')
+            let newUser = new GameEntity(20,20,20,20, 'green')
+            newUser.socketID = data
+            game.entities.push(newUser)
+        })
+    },
+    initiatePlayer: socketID => {
+        let player = new GameEntity(20,20,20,20, 'green', socketID)
+        game.socketID = socketID
+        game.socket.emit('updateUser', player)
+        game.entities.push(player)
+    },
+    addUser: socketID => {
+        let player = new GameEntity(20,20,20,20, 'green', socketID)
+        game.entities.push(player)
+    }
 }
 
 
-function GameEntity(width, height, x, y, color) {
+function GameEntity(width, height, x, y, color, socketID) {
     this.width = width
     this.height = height
+    this.socketID = socketID
     this.x = x
     this.y = y
     this.color = color
@@ -66,10 +92,6 @@ function updateGameArea() {
 }
 
 $(document).ready(function () {
-
     game.start()
-
-    let player = new GameEntity(20,20,20,20, 'green')
-    game.entities.push(player)
 })
 
